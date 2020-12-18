@@ -1,0 +1,13 @@
+set(SOURCES
+    ArenaBorderObservation.cpp
+    ArenaCornerObservation.cpp
+    GoalObservation.cpp
+    TagsObservation.cpp
+    FieldObservation.cpp
+    FieldObservationSet.cpp
+    FieldPF.cpp
+    FieldPosition.cpp
+    RobotController.cpp
+    CompassObservation.cpp
+    PenaltyMarkObservation.cpp
+)

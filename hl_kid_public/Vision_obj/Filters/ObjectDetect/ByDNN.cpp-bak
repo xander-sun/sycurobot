@@ -1,0 +1,467 @@
+#include "Filters/ObjectDetect/ByDNN.hpp"
+
+#include "CameraState/CameraState.hpp"
+//#include "Filters/Patches/PatchProvider.hpp"
+//#include "Utils/RotatedRectUtils.hpp"
+#include "Utils/Interface.h"
+#include "Utils/OpencvUtils.h"
+#include "Utils/ROITools.hpp"
+#include "rhoban_utils/timing/benchmark.h"
+
+#include "rhoban_geometry/circle.h"
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
+#include <utility>
+#include <string>
+#include <vector>
+#include <sstream>
+#include <iostream>
+#include <rhoban_utils/logging/logger.h>
+
+//#include <hl_monitoring/field.h>
+
+//import tensorflow
+#include <fstream>
+
+#include "tensorflow/cc/ops/const_op.h"
+#include "tensorflow/cc/ops/image_ops.h"
+#include "tensorflow/cc/ops/standard_ops.h"
+#include "tensorflow/core/framework/graph.pb.h"
+#include "tensorflow/core/framework/tensor.h"
+#include "tensorflow/core/graph/default_device.h"
+#include "tensorflow/core/graph/graph_def_builder.h"
+#include "tensorflow/core/lib/core/errors.h"
+#include "tensorflow/core/lib/core/stringpiece.h"
+#include "tensorflow/core/lib/core/threadpool.h"
+#include "tensorflow/core/lib/io/path.h"
+#include "tensorflow/core/lib/strings/str_util.h"
+#include "tensorflow/core/lib/strings/stringprintf.h"
+#include "tensorflow/core/platform/env.h"
+#include "tensorflow/core/platform/init_main.h"
+#include "tensorflow/core/platform/logging.h"
+#include "tensorflow/core/platform/types.h"
+//#include "tensorflow/core/platform/path.h"
+//#include "tensorflow/core/platform/strcat.h"
+
+#include "tensorflow/core/public/session.h"
+#include "tensorflow/core/util/command_line_flags.h"
+
+// These are all common classes it's handy to reference with no namespace.
+using tensorflow::Flag;
+using tensorflow::Tensor;
+using tensorflow::Status;
+using tensorflow::string;
+using tensorflow::int32;
+using tensorflow::tstring;
+
+static rhoban_utils::Logger logger("ByDNN");
+
+using namespace std;
+using namespace rhoban_geometry;
+using ::rhoban_utils::Benchmark;
+
+
+namespace Vision_obj
+{
+namespace Filters
+{
+/*  
+std::map<std::string, hl_monitoring::Field::POIType> EverythingByDNN::stringToPOIEnum = {
+  { "ArenaCorner", hl_monitoring::Field::POIType::ArenaCorner },
+  { "LineCorner", hl_monitoring::Field::POIType::LineCorner },
+  { "T", hl_monitoring::Field::POIType::T },
+  { "X", hl_monitoring::Field::POIType::X },
+  { "Center", hl_monitoring::Field::POIType::Center },
+  { "PenaltyMark", hl_monitoring::Field::POIType::PenaltyMark },
+  { "PostBase", hl_monitoring::Field::POIType::PostBase }
+};
+*/
+
+ByDNN::ByDNN() : Filter("ByDNN"), model_path("model.pb")
+{
+  // TODO load classes from json config file
+
+  // WARNING order is important (alphabetical order)
+  //   if classes are removed, just comment the corresponding line, make sure to keep alphabetical order
+  classNames.push_back("ArenaCorner");
+  classNames.push_back("Ball");
+  classNames.push_back("Center");
+  classNames.push_back("Empty");
+  classNames.push_back("LineCorner");
+  classNames.push_back("PenaltyMark");
+  classNames.push_back("PostBase");
+  classNames.push_back("Robot");
+  classNames.push_back("T");
+  classNames.push_back("X");
+}
+
+void ByDNN::setParameters()
+{
+  debugLevel = ParamInt(0, 0, 1);
+  scoreThreshold = ParamFloat(0.5, 0.0, 1.0);
+  imSize = ParamInt(32, 1, 64);
+  input_width = ParamInt(299, 32, 512);
+  input_height = ParamInt(299, 32, 512);
+  input_mean_R = ParamFloat(0.406, 0.0, 1.0);
+  input_mean_G = ParamFloat(0.456, 0.0, 1.0);
+  input_mean_B = ParamFloat(0.485, 0.0, 1.0);
+  input_std_R = ParamFloat(0.225, 0.0, 1.0);
+  input_std_G = ParamFloat(0.224, 0.0, 1.0);
+  input_std_B = ParamFloat(0.299, 0.0, 1.0);
+
+  params()->define<ParamInt>("debugLevel", &debugLevel);
+  params()->define<ParamFloat>("scoreThreshold", &scoreThreshold);
+  params()->define<ParamInt>("imSize", &imSize);
+  params()->define<ParamInt>("input_width", &input_width);
+  params()->define<ParamInt>("input_height", &input_height);
+  params()->define<ParamFloat>("input_mean_R", &input_mean_R);
+  params()->define<ParamFloat>("input_mean_G", &input_mean_G);
+  params()->define<ParamFloat>("input_mean_B", &input_mean_B);
+  params()->define<ParamFloat>("input_std_R", &input_std_R);
+  params()->define<ParamFloat>("input_std_G", &input_std_G);
+  params()->define<ParamFloat>("input_std_B", &input_std_B);
+  for (const std::string& className : classNames)
+  {
+    isUsingFeature[className] = ParamInt(0, 0, 1);
+    params()->define<ParamInt>("uses" + className, &(isUsingFeature[className]));
+  }
+}
+
+void ByDNN::updateUsedClasses()
+{
+  usedClassNames.clear();
+  for (size_t idx = 0; idx < classNames.size(); idx++)
+  {
+    const std::string& className = classNames[idx];
+    if (className == "Empty" || isUsingFeature[className] != 0)
+    {
+      usedClassNames.push_back(className);
+    }
+  }
+}
+
+std::string ByDNN::getClassName() const
+{
+  return "EverythingByDNN";
+}
+
+Tensor readTensorFromMat(const cv::Mat &mat) {
+      int height = mat.rows;
+      int width = mat.cols;
+      int depth = mat.channels();
+      Tensor inputTensor(tensorflow::DT_UINT8, tensorflow::TensorShape({1, height, width, depth}));
+      auto inputTensorMapped = inputTensor.tensor<tensorflow::uint8, 4>();
+
+      cv::Mat frame;
+      mat.convertTo(frame, CV_8UC3);
+      const tensorflow::uint8* source_data = (tensorflow::uint8*)frame.data;
+      for (int y=0; y<height; y++){
+        const tensorflow::uint8* source_row = source_data + (y*width*depth);
+        for (int x=0; x<width; x++){
+            const tensorflow::uint8* source_pixel = source_row + (x*depth);
+            for (int c=0; c<depth; c++){
+                const tensorflow::uint8* source_value = source_pixel + c;
+                inputTensorMapped(0, y, x, c) = *source_value;
+            }
+        }
+      }
+      return inputTensor;
+}
+
+
+Json::Value ByDNN::toJson() const
+{
+  Json::Value v = Filter::toJson();
+  v["model_path"] = model_path;
+  return v;
+}
+
+void ByDNN::fromJson(const Json::Value& v, const std::string& dir_name)
+{
+  Filter::fromJson(v, dir_name);
+  rhoban_utils::tryRead(v, "model_path", &model_path);
+
+  loadModel(model_path);
+}
+
+int ByDNN::expectedDependencies() const
+{
+  return 1;
+}
+
+void ByDNN::loadModel(string model_path)
+{
+  //importer = cv::dnn::createTensorflowImporter(model_path.c_str());
+  //importer->populateNet(net);
+
+  // First we load and initialize the model.
+  //std::unique_ptr<tensorflow::Session> session;
+  //string graph_path = tensorflow::io::JoinPath(root_dir, graph);
+  //string graph_path = graph;
+  //LOG(ERROR) << "graph_path:" << graph_path;
+
+  //Status load_graph_status = LoadGraph(model_path, &session);
+
+//}
+//Status LoadGraph(const string& graph_file_name,
+//                 std::unique_ptr<tensorflow::Session>* session) {
+  tensorflow::GraphDef graph_def;
+  Status load_graph_status =
+      ReadBinaryProto(tensorflow::Env::Default(), model_path, &graph_def);
+  //if (!load_graph_status.ok()) {
+  //  return tensorflow::errors::NotFound("Failed to load compute graph at '",
+  //                                      graph_file_name, "'");
+  //}
+  std::unique_ptr<tensorflow::Session> m_session((tensorflow::NewSession(tensorflow::SessionOptions())));
+  Status session_create_status = m_session->Create(graph_def);
+  if (!session_create_status.ok()) {
+    //return session_create_status;
+    //return Error::ERR_FAILED_CREATE_TENSORFLOW_SESSION;
+    LOG(ERROR) << "loadGraph(): ERROR" << session_create_status;
+  }
+  //return Status::OK();
+}
+
+
+//std::pair<int, double> ByDNN::getClass(cv::Mat patch)
+std::vector<Tensor> ByDNN::getClass(cv::Mat image)
+{
+  /*
+  cv::Size patchSize = patch.size();
+
+  if (patchSize.width != imSize || patchSize.height != imSize)  // TODO hardcoded sizes
+    cv::resize(patch, patch, cv::Size(imSize, imSize));
+  cv::Mat normalized_patch;
+  cv::normalize(patch,normalized_patch,-1.0,1.0,cv::NORM_MINMAX, CV_32F);
+  cv::dnn::Blob in = cv::dnn::Blob::fromImages(normalized_patch);
+
+  net.setBlob(".img_placeholder", in);
+
+  Benchmark::open("predict");
+  net.forward();
+  Benchmark::close("predict");
+
+  cv::dnn::Blob prob = net.getBlob("generic_cnn/fully_connected/inference_output/Softmax");  // gather output of "prob" layer
+  int classId;
+  double classProb;
+
+  cv::Mat probMat = prob.matRefConst().reshape(1, 1);  // reshape the blob to 1xNbClass matrix
+
+  size_t nbClassesDNN = probMat.cols;
+  size_t usedClasses = usedClassNames.size();
+  if (nbClassesDNN != usedClasses)
+  {
+    throw std::runtime_error("#classes in DNN(" + std::to_string(nbClassesDNN) + ") does not match #usedClasses (" +
+                             std::to_string(usedClasses) + ")");
+  }
+  if (debugLevel > 0)
+  {
+    std::cout << probMat << std::endl;
+  }
+  cv::Point classNumber;
+  minMaxLoc(probMat, NULL, &classProb, NULL, &classNumber);
+  classId = classNumber.x;
+  // logger.log("%d, %f", classId, classProb);
+
+  return std::pair<int, double>(classId, classProb);
+  */
+/////////////////////////////////////////////////////////////////
+
+  // resize mat image
+  cv::Size imagesize =image.size();
+  if (imagesize.width != input_width || imagesize.height != input_height) {  // TODO hardcoded sizes
+    cv::resize(image, image, cv::Size(input_width, input_height)); 
+  }
+  
+  // opencv Mat normalize, NORM_MINMAX: linear norm
+  std::vector<float> mean_value{0.406, 0.456, 0.485};
+  std::vector<float> std_value{0.225, 0.224, 0.229};
+  cv::normalize(image, image, 1.0, 0, cv::NORM_MINMAX);
+  std::vector<cv::Mat> bgrChannels(3);
+  cv::split(image, bgrChannels);
+  for (auto i = 0; i < 3; i++)
+  {
+    bgrChannels[i].convertTo(bgrChannels[i], CV_32FC1, 1.0/std_value[1], (0.0 - mean_value[i]));
+  }
+  cv::merge(bgrChannels, image);
+  
+  
+  // Convert mat to tensor
+  tensorflow::TensorShape shape = tensorflow::TensorShape();
+  shape.AddDim(1);
+  shape.AddDim(input_height);
+  shape.AddDim(input_width);
+  shape.AddDim(3);
+  tensorflow::Tensor img_tensor = Tensor(tensorflow::DT_FLOAT, shape);
+  img_tensor= readTensorFromMat(image);
+
+  // Tensorflow normalize, Subtract the mean and divide by the scale.
+  //auto root = tensorflow::Scope::NewRootScope();
+  //auto div =  Div(root.WithOpName("normalized"), Sub(root, readTensorStatus, {input_mean}),
+  //     {input_std});
+
+  string input_layer = "image_tensor:0";
+  vector<string> output_layer ={ "detection_boxes:0", "detection_scores:0", "detection_classes:0", "num_detections:0" };
+  // output 
+  std::vector<Tensor> outputs;
+
+   // First we load and initialize the model.
+  //std::unique_ptr<tensorflow::Session> session;
+
+  Status run_status = this->m_session->Run({{input_layer, resized_tensor}}, output_layer, {}, &outputs);
+  
+  
+  Status run_status = session->Run({{input_layer, resized_tensor}}, output_layer, {}, &outputs);
+  return std::vector<Tensor> outputs;
+}
+
+void ByDNN::process()
+{
+  //clearAllFeatures();
+  updateUsedClasses();
+  std::vector<Tensor> output;
+ 
+  //const PatchProvider& dep = dynamic_cast<const PatchProvider&>(getDependency());
+  //const Filter & src = getDependency(_dependencies[0]);
+  //const cv::Mat & src_img = *(src.getImg());
+  const std::vector<cv::Mat> image = *(getDependency(_dependencies[0]).getImg());
+
+  std::vector<Tensor> outputs = getClass(image);
+  // Extract results from the outputs vector
+  tensorflow::TTypes<float>::Flat iNum = outputs[0].flat<float>();
+  tensorflow::TTypes<float>::Flat scores = outputs[1].flat<float>();
+  tensorflow::TTypes<float>::Flat classes = outputs[2].flat<float>();
+  tensorflow::TTypes<float>::Flat num_detections = outputs[3].flat<float>();
+  auto boxes = outputs[0].tensor<float,3>();
+
+  try {
+  for(size_t class_id = 0; class_id < num_detections(0) && class_id < 20; class_id++)
+  {
+    // over threshold 
+    bool isValid = scores(class_id) >= scoreThreshold;
+    
+    // 
+    std::string s_class;
+    s_class = usedClassNames.at(classes);
+
+    cv::Rect box(boxes(0,class_id,0), boxes(0,class_id,1), 
+              boxes(0,class_id,2)-boxes(0,class_id,0), boxes(0,class_id,3)-boxes(0,class_id,1));
+
+    if (s_class != "Empty")
+      {                         // not Empty
+        if (s_class == "Ball")  // Ball
+          pushBall(box);
+        else if (s_class == "Robot")
+          pushRobot(box);
+        else if (stringToPOIEnum.count(s_class) > 0)
+          pushPOI(stringToPOIEnum.at(s_class), box);
+        else
+          logger.error("Unknown label: '%s'", s_class.c_str());
+      }
+    
+    if (s_class == "Empty")  // Empty
+      {
+        //drawRotatedRectangle(output, roi, cv::Scalar(0, 0, 255), 2);
+      }
+    else
+      {
+        double font_scale = 1.2;
+        if (isValid)
+        {
+          cv::rectangle(image, box, cv::Scalar(0, 255, 0), 2);
+          cv::putText(image, s_class, box.tl(), cv::FONT_HERSHEY_COMPLEX_SMALL,
+                      font_scale, cv::Scalar(0, 255, 0), 1.5, CV_AA);
+        }
+        else
+        {
+          cv::rectangle(image, box, cv::Scalar(0, 0, 255), 2);
+          cv::putText(image, s_class, box.tl(), cv::FONT_HERSHEY_COMPLEX_SMALL,
+                      font_scale, cv::Scalar(0, 0, 255), 1.5, CV_AA);
+        }
+      }
+  }
+  }
+  catch (const std::bad_alloc& exc)
+  {
+    std::ostringstream oss;
+    oss << "Pipeline structure is invalid: "
+        << "filter " << name << " dependency is not a PatchProvider" << std::endl;
+    throw std::runtime_error(oss.str());
+  }
+  img() = image;
+
+} 
+
+/*
+  try
+  {
+    const PatchProvider& dep = dynamic_cast<const PatchProvider&>(getDependency());
+    output = dep.getImg()->clone();
+    //const std::vector<cv::Mat>& patches = dep.getPatches();
+    //const std::vector<std::pair<float, cv::RotatedRect>>& rois = dep.getRois();
+
+    //if (rois.size() != patches.size())
+    //  throw std::runtime_error("EverythingByDNN:: number of rois does not match number of patches");
+
+    std::pair<int, double> res = getClass(output)
+    
+    for (size_t patch_id = 0; patch_id < rois.size(); patch_id++)
+    {
+      const cv::Mat& patch = patches[patch_id];
+      const cv::RotatedRect& roi = rois[patch_id].second;
+
+      std::pair<int, double> res = getClass(patch);
+
+      bool isValid = res.second >= scoreThreshold;
+
+      std::string s_class;
+      s_class = usedClassNames.at(res.first);
+
+      cv::Point2f roi_center(roi.center.x, roi.center.y);
+      if (s_class != "Empty")
+      {                         // not Empty
+        if (s_class == "Ball")  // Ball
+          pushBall(roi_center);
+        else if (s_class == "Robot")
+          pushRobot(roi_center);
+        else if (stringToPOIEnum.count(s_class) > 0)
+          pushPOI(stringToPOIEnum.at(s_class), cv::Point2f(roi.center.x, roi.center.y));
+        else
+          logger.error("Unknown label: '%s'", s_class.c_str());
+      }
+
+      if (s_class == "Empty")  // Empty
+      {
+        drawRotatedRectangle(output, roi, cv::Scalar(0, 0, 255), 2);
+      }
+      else
+      {
+        double font_scale = 1.2;
+        if (isValid)
+        {
+          drawRotatedRectangle(output, roi, cv::Scalar(0, 255, 0), 2);
+          cv::putText(output, s_class, cv::Point(roi.center.x, roi.center.y), cv::FONT_HERSHEY_COMPLEX_SMALL,
+                      font_scale, cv::Scalar(0, 255, 0), 1.5, CV_AA);
+        }
+        else
+        {
+          drawRotatedRectangle(output, roi, cv::Scalar(0, 0, 255), 2);
+          cv::putText(output, s_class, cv::Point(roi.center.x, roi.center.y), cv::FONT_HERSHEY_COMPLEX_SMALL,
+                      font_scale, cv::Scalar(0, 0, 255), 1.5, CV_AA);
+        }
+      }
+    }
+  }
+  catch (const std::bad_alloc& exc)
+  {
+    std::ostringstream oss;
+    oss << "Pipeline structure is invalid: "
+        << "filter " << name << " dependency is not a PatchProvider" << std::endl;
+    throw std::runtime_error(oss.str());
+  }
+  img() = output;
+}
+*/
+}  // namespace Filters
+}  // namespace Vision
