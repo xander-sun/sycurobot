@@ -1,0 +1,12 @@
+{
+    "class name" : "MixedApproach",
+    "content" : {
+        "nearby_policy" : {
+            "class name" : "FAPolicy",
+            "content" : {
+                "rel path" : "2017_07_09.bin",
+                "apply_noise" : false
+            }
+        }
+    }
+}

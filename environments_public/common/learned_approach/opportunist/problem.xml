@@ -1,0 +1,13 @@
+<polar_approach>
+  <min_step_x>-0.02</min_step_x>
+  <max_step_x>0.03</max_step_x>
+  <max_step_y>0.015</max_step_y>
+  <max_step_theta>0.262</max_step_theta>
+  <max_step_x_diff>0.01</max_step_x_diff>
+  <max_step_y_diff>0.005</max_step_y_diff>
+  <max_step_theta_diff>0.0436</max_step_theta_diff>
+  <kick_zone_names>
+    <v>classic</v>
+    <v>lateral</v>
+  </kick_zone_names>  
+</polar_approach>

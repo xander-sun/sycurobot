@@ -1,0 +1,57 @@
+{
+    "angularPitchTolerance" : 5,
+    "benchmark" : false,
+    "benchmarkDetail" : 4,
+    "gpuOn" : false,
+    "readFromLog" : false,
+    "embedded" : true,
+    "imageDelay" : -5,
+    "writeBallStatus" : true,
+    "arenaProviders" : [],//Currently, the method used to import FieldBorderData is different
+    "ballProviders" : ["ballByDNN"],
+    "goalProviders" : ["goalByDNN"],
+    //"penaltyMarkProviders" : ["objectByDNN"],
+    "compassProviders" : [],//"visualCompass"],
+    "playing" : true,
+    "pipeline" : {
+        "paths" : [
+            "../common/vision_filters/colors.json",
+            //"../common/vision_filters/ball_detection.json",
+            "../common/vision_filters/bydnn.json",
+            "../common/vision_filters/clipping.json",
+            "../common/vision_filters/goals.json"
+
+            //"../common/vision_filters/robots.json"
+           //"../common/vision_filters/object_detection.json"
+           //"../common/vision_filters/visual_compass.json"
+        ],
+        "filters" : [
+            {
+                "class name" : "SourcePtGrey",
+                "content" : {
+                    "name" : "source",
+                    "warningExecutionTime": 30,
+                    "wished_properties" : {
+                        "Shutter" : {
+                            "autoManualMode" : false,
+                            "absValue" : 2.5
+                        },
+                        "Gain" : {
+                            "autoManualMode" : false,
+                            "absValue" : 20
+                        },
+                        "FrameRate" : {
+                            "autoManualMode" : false,
+                            "absValue" : 50
+                        },
+                        "WhiteBalance" : {
+                            "autoManualMode" : false,
+                            "valueA" : 500,
+                            "valueB" : 1000
+                        }
+                    }
+                }
+            }
+        ]
+    }
+}

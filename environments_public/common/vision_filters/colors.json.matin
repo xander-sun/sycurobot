@@ -1,0 +1,84 @@
+// Require existence of the following external filters
+// Source (YCbCr image)
+[
+    {
+        "class name" : "ColorDensity",
+        "content" : {
+            "name" : "greenDensity",
+            "dependencies" : ["greenII"],
+            "paramInts" : { "kernel_size" : 30},
+            "paramFloats" : {"resize_factor" : 0.2}
+        }
+    },
+    {
+        "class name" : "ColorDensity",
+        "content" : {
+            "name" : "whiteDensity",
+            "dependencies" : ["greenII"],
+            "paramInts" : { "kernel_size" : 30},
+            "paramFloats" : {"resize_factor" : 0.2}
+        }
+    },
+    {
+        "class name" : "Integral",
+        "content" : {
+            "name" : "whiteII",
+            "dependencies" : ["white"]
+        }
+    },
+    {
+        "class name" : "Integral",
+        "content" : {
+            "name" : "greenII",
+            "dependencies" : ["green"]
+        }
+    },
+    {
+        "class name" : "Integral",
+        "content" : {
+            "name" : "integralY",
+            "dependencies" : ["Y"]
+        }
+    },
+    {
+        "class name" : "Threshold",
+        "content" : {
+            "name" : "white",
+            "dependencies" : ["Y"],
+            "paramInts" : {"threshold" : 100}
+        }
+    },
+    {
+        "class name" : "ChannelSelector",
+        "content" : {
+            "name" : "Y",
+            "dependencies" : ["source"],
+            "paramInts" : {"channel" : 0}
+        }
+    },
+    {
+        "class name" : "ColorConverter",
+        "content" : {
+            "name" : "human",
+            "conversion" : "YCrCb2BGR",
+            "dependencies" : ["source"]
+        }
+    },
+    {
+        "class name" : "ColorBounding",
+        "content" : {
+            "name" : "green",
+            "dependencies" : ["source"],
+            "paramInts" : {
+                "maxU" : 132,
+                "maxV" : 129,
+                "maxY" : 93,
+                "minU" : 0,
+                "minV" : 0,
+                "minY" : 40
+
+            },
+            "display" : true
+        }
+    }
+]

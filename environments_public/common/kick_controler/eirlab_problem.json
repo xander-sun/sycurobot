@@ -1,0 +1,51 @@
+{
+    "kmc_path" : "KickModelCollection.json",
+    "players" :
+    [
+        {
+            "name" : "sigmaban",
+            "policy" : {
+                "class name" : "ExpertApproach",
+                "content" : { "type" : "polar" }
+            },
+            "kick_options" : [
+                {
+                    "kick_decision_model" : {
+                        "class name" : "FinalKick",
+                        "content" : {
+                            "max_y" : 1.3,
+                            "goal_x" : 4.0
+                        }
+                    },
+                    "kick_model_names" : ["classic","lateral"],
+                    "policy" : {
+                        "class name" : "ExpertApproach",
+                        "content" : { "type" : "polar" }
+                    }
+                },
+                {
+                    "kick_decision_model" : {
+                        "class name" : "DirectedKick",
+                        "content" : {}
+                    },
+                    "kick_model_names" : ["small"],
+                    "policy" : {
+                        "class name" : "ExpertApproach",
+                        "content" : { "type" : "polar" }
+                    }
+                },
+                {
+                    "kick_decision_model" : {
+                        "class name" : "DirectedKick",
+                        "content" : {}
+                    },
+                    "kick_model_names" : ["classic","lateral"],
+                    "policy" : {
+                        "class name" : "ExpertApproach",
+                        "content" : { "type" : "polar" }
+                    }
+                }
+            ]
+        }
+    ]
+}

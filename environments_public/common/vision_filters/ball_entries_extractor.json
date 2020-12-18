@@ -1,0 +1,33 @@
+{
+    "angularPitchTolerance" : 5,
+    "benchmark" : false,
+    "benchmarkDetail" : 4,
+    "gpuOn" : false,
+    "readFromLog" : true,
+    "embedded" : false,
+    "imageDelay" : -5,
+    "exitOnStreamEnd" : true,
+    "writeBallStatus" : true,
+    "arenaProviders" : [],
+    "goalProviders" : [],
+    "ballProviders" : ["ballByDNN"],
+    "compassProviders" : [],
+    "playing" : true,
+    "pathToLog" : "workingLog/lowLevel.log",
+    "pipeline" : {
+        "paths" : [
+            "../common/vision_filters/colors.json",
+            "../common/vision_filters/ball_detection.json"
+        ],
+        "filters" : [
+            {
+                "class name" : "SourceLogs",
+                "content" : {
+                    "name" : "source",
+                    "imagesFile" : "workingLog/images.csv",
+                    "startIndex" : 0
+                }
+            }
+        ]
+    }
+}

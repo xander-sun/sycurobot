@@ -1,0 +1,15 @@
+{
+    "class name"  : "VisionCorrectionModel",
+    "content" : {
+        "cam_aperture_height" : 0.91577425852142469,
+        "cam_aperture_width" : 1.1693705988362006,
+        "cam_offset" : [ 0, 0, 0 ],
+        "img_height" : 480,
+        "img_width" : 640,
+        "imu_offset" : [ 0, 0, 0 ],
+        "neck_offset" : [ 0, 0, 0 ],
+        "px_stddev" : 10,
+        "px_stddev_space" : [1,20],
+        "max_angle_error" : 5
+    }
+}

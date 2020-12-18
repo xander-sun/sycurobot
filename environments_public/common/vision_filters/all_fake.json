@@ -1,0 +1,46 @@
+{
+    "angularPitchTolerance" : 5,
+    "benchmark" : false,
+    "benchmarkDetail" : 4,
+    "gpuOn" : false,
+    "readFromLog" : true,
+    "embedded" : false,
+    "imageDelay" : -5,
+    "writeBallStatus" : true,
+    "exitOnStreamEnd" : false,
+    "arenaProviders" : [],//Currently, the method used to import FieldBorderData is different
+    "goalProviders" : ["goalByDNN"],
+    "ballProviders" : ["ballByDNN"],
+    //"penaltyMarkProviders" : ["objectByDNN"],
+    "compassProviders" : [],// Disabled currently "visualCompass"],
+    "playing" : false,
+    "pathToLog" : "workingLog/lowLevel.log",
+    "RadarImg" : true,
+    "TaggedImg" : true,
+    "TopView" : true,
+    "pipeline" : {
+        "paths" : [
+            //"../common/vision_filters/colors.json",
+            //"../common/vision_filters/ball_detection.json",
+            "../common/vision_filters/bydnn.json"
+            //"../common/vision_filters/clipping.json",
+            //"../common/vision_filters/goals.json",
+            //"../common/vision_filters/object_detection.json",
+            //"../common/vision_filters/robots.json"
+            //"../common/vision_filters/sycu_robot_detection.json"
+            //"../common/vision_filters/sycu_penalty_detection.json"
+            //"visual_compass.json"//Currently disabled
+        ],
+        "filters" : [
+            {
+                "class name" : "SourceLogs",
+                "content" : {
+                    "name" : "source",
+                    "imagesFile" : "workingLog/images.csv",
+                    "display" : true,
+                    "startIndex" : 0
+                }
+            }
+        ]
+    }
+}

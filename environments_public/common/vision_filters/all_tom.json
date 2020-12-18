@@ -1,0 +1,52 @@
+{
+    "angularPitchTolerance" : 5,
+    "benchmark" : false,
+    "benchmarkDetail" : 4,
+    "gpuOn" : false,
+    "readFromLog" : false,
+    "embedded" : true,
+    "imageDelay" : -5,
+    "arenaProviders" : [],//Currently, the method used to import FieldBorderData is different
+    "ballProviders" : ["ballByDNN"],
+    "goalProviders" : ["goalByDNN"],
+    "compassProviders" : [],//"visualCompass"],
+    "playing" : true,
+    "pipeline" : {
+        "paths" : [
+            "../common/vision_filters/colors_tom.json",
+            "../common/vision_filters/ball_detection.json",
+            "../common/vision_filters/clipping.json",
+            "../common/vision_filters/goals_tom.json",
+            "../common/vision_filters/robots.json"
+//            "../common/vision_filters/visual_compass.json"
+        ],
+        "filters" : [
+            {
+                "class name" : "SourcePtGrey",
+                "content" : {
+                    "name" : "source",
+                    "warningExecutionTime": 30,
+                    "wished_properties" : {
+                        "Shutter" : {
+                            "autoManualMode" : false,
+                            "absValue" : 2.5
+                        },
+                        "Gain" : {
+                            "autoManualMode" : false,
+                            "absValue" : 13
+                        },
+                        "FrameRate" : {
+                            "autoManualMode" : false,
+                            "absValue" : 40
+                        },
+                        "WhiteBalance" : {
+                            "autoManualMode" : false,
+                            "valueA" : 528,
+                            "valueB" : 735
+                        }
+                    }
+                }
+            }
+        ]
+    }
+}

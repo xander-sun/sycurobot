@@ -1,0 +1,7 @@
+{
+    "class name" : "FAPolicy",
+    "content" : {
+        "rel path" : "eirlab_policy.bin",
+        "apply_noise" : false
+    }
+}

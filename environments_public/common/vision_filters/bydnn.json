@@ -1,0 +1,19 @@
+// Require existence of the following external filters
+// human (BGR image)
+// greenII (Integral Image)
+// integralY (Integral Image)
+[
+    {
+        "class name" : "ByDNN",
+        "content" : {
+            "name" : "ballByDNN",
+            "display" : true,
+            "dependencies" : ["source"],
+            //"arch_path" : "../common/dnn/balls/structure.json",
+            //"weights_path" : "../common/dnn/balls/weights.bin",
+            "paramFloats" : {
+                "scoreThreshold" : 0.5
+            }
+        }
+	}
+]

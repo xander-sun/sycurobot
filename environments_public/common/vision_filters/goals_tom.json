@@ -1,0 +1,53 @@
+// Require the following filters
+// whiteII
+// greenII
+// ballRadiusProvider
+// clipping_by_border
+[
+    {
+        "class name" : "GoalByDNN",
+        "content" : {
+            "name" : "goalByDNN",
+//            "display" : true,
+            "dependencies" : ["goalPatchProvider"],
+            "arch_path" : "../common/dnn/posts/structure.json",
+            "weights_path" : "../common/dnn/posts/weights.bin",
+            "paramFloats" : {
+                "scoreThreshold" : 0.73
+            }
+        }
+    },
+    {
+        "class name" : "RoiToPatches",
+        "content" : {
+            "name" : "goalPatchProvider",
+            "dependencies" : ["human", "goalROIProvider"],
+            "paramInts" : {
+                "patchHeight" : 32,
+                "patchWidth" : 32
+            }
+        }
+    },
+    {
+        "class name" : "GoalByII",
+        "content" : {
+            "name" : "goalROIProvider",
+            "dependencies" : ["whiteII","greenII","ballRadiusProvider","clipping_by_border"],
+            "paramInts" : {
+                "decimationRate" : 3,
+                "useMask" : 0
+            },
+            "paramFloats" : {
+                "aboveRatio" : 2.0,
+                "belowRatio" : 2.0,
+                "boundaryWidthRatio" : 2.0,
+                "widthScale" : 1.15,
+                "belowCoeff" : 1.0,
+                "minScore" : 220,
+                "minWidth" : 5.0,
+                "filledMaskMinWidth" : 5.0,
+                "roiRatio" : 4.0
+            }
+        }
+    }
+]

@@ -1,0 +1,10 @@
+{
+    "min_step_x" : -0.02,
+    "max_step_x" : 0.03,
+    "max_step_y" : 0.015,
+    "max_step_theta" : 0.262,
+    "max_step_x_diff" : 0.01,
+    "max_step_y_diff" : 0.005,
+    "max_step_theta_diff" : 0.0436,
+    "kick_zone_names" : ["small"]
+}

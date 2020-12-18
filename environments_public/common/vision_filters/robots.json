@@ -1,0 +1,71 @@
+// Require the following filters
+// green (Mask)
+// white (Mask)
+// ballRadiusProvider (Mono-channel)
+// Y
+[
+    {
+        "class name" : "ObstacleByDNN",
+        "content" : {
+            "name" : "obstacleByDNN",
+//            "display" : true,
+            "dependencies" : ["obstaclePatchProvider"],
+            "arch_path" : "../common/dnn/obstacles/structure.json",
+            "weights_path" : "../common/dnn/obstacles/weights.bin",
+            "paramFloats" : {
+                "scoreThreshold" : 0.9
+            }
+        }
+    },
+    {
+        "class name" : "RoiToPatches",
+        "content" : {
+            "name" : "obstaclePatchProvider",
+            "dependencies" : ["Y", "obstacleROIProvider"],
+            "paramInts" : {
+                "patchHeight" : 32,
+                "patchWidth" : 16
+            }
+        }
+    },
+    {
+        "class name" : "ObstacleByII",
+        "content" : {
+            "name" : "obstacleROIProvider",
+            "dependencies" : [
+                "whiteAndGreenII",
+                "ballRadiusProvider"
+            ],
+            "paramInts" : {
+                "decimationRate" : 4,
+                "tagLevel" : 1,
+                "maxRois" : 10
+            },
+            "paramFloats" : {
+                "aboveRatio" : 1.5,
+                "belowRatio" : 1.5,
+                "boundaryHeightRatio" : 0.5,//Goal: allowing to have both, basis and middle of the robot
+                "boundaryWidthRatio" : 1.5,
+                "widthScale" : 4.0,
+                "belowCoeff" : 1.0,
+                "minScore" : 100,
+                "minWidth" : 25.0,
+                "roiRatio" : 1.5
+            }
+        }
+    },
+    {
+        "class name" : "Integral",
+        "content" : {
+            "name" : "whiteAndGreenII",
+            "dependencies" : ["whiteAndGreen"]
+        }
+    },
+    {
+        "class name" : "MaskOr",
+        "content" : {
+            "name" : "whiteAndGreen",
+            "dependencies" : ["green","white"]
+        }
+    }
+]

@@ -1,0 +1,60 @@
+{
+    "grassModel" : {
+        "ratio" : 0.5,
+        "coneWidth" : 90,
+        "coneOffset" : 0
+    },
+    "map" : {
+        "classic" : {
+            "class name" : "ClassicKick",
+            "content" : {
+                "kick_power" : 3,//[m]
+                "right_kick_dir" : 0,//[deg]
+                "rel_dist_stddev" : 0.1,
+                "dir_stddev" : 15,//[deg]
+                "kick_zone" : {
+                    "kick_y_offset" : 0.06,//[m]
+                    "kick_y_tol" : 0.06,//[m]
+                    "kick_x_min" : 0.14,//[m]
+                    "kick_x_max" : 0.32,//[m]
+                    "kick_theta_tol" : 22,//[deg]
+                    "kick_theta_offset" : 0
+                }
+            }
+        },
+        "lateral" : {
+            "class name" : "ClassicKick",
+            "content" : {
+                "kick_power" : 3,//[m]
+                "right_kick_dir" : 75,//[deg]
+                "rel_dist_stddev" : 0.1,
+                "dir_stddev" : 15,//[deg]
+                "kick_zone" : {
+                    "kick_y_offset" : -0.12,//[m]
+                    "kick_y_tol" : 0.06,//[m]
+                    "kick_x_min" : 0.14,//[m]
+                    "kick_x_max" : 0.32,//[m]
+                    "kick_theta_tol" : 22,//[deg]
+                    "kick_theta_offset" : 75
+                }
+            }
+        },
+        "small" : {
+            "class name" : "ClassicKick",
+            "content" : {
+                "kick_power" : 1,//[m]
+                "right_kick_dir" : 0,//[deg]
+                "rel_dist_stddev" : 0.1,
+                "dir_stddev" : 25,//[deg]
+                "kick_zone" : {
+                    "kick_y_offset" : 0.06,//[m]
+                    "kick_y_tol" : 0.06,//[m]
+                    "kick_x_min" : 0.14,//[m]
+                    "kick_x_max" : 0.32,//[m]
+                    "kick_theta_tol" : 22,//[deg]
+                    "kick_theta_offset" : 0
+                }
+            }
+        }
+    }
+}

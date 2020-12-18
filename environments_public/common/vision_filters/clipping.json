@@ -1,0 +1,109 @@
+// Require the following filters
+// source (YCbCr)
+// green (Mask)
+// greenDensity (DensityColor)
+// human (BGR)
+[
+    {
+        "class name" : "ClippingByBorder",
+        "content" : {
+            "name" : "clipping_by_border",
+            "dependencies" : ["fieldBorder"]
+        }
+    },
+    {
+        "class name" : "Rescale",
+        "content" : {
+            "name" : "clipping_rescale",
+            "dependencies" : ["clipping_by_border"],
+            "paramFloats" : {"ratio" : 4}
+        }
+    },
+
+    {
+        "class name" : "FieldBorder",
+        "content" : {
+            "name" : "fieldBorder",
+            "dependencies" : ["green", "greenDensity", "human", "green_density_without_black"],
+            "paramInts" : {
+                "density_kernel_size" : 30,
+                "comb_size" : 100,
+                "scale_factor" :  4,
+                "loc_active" : 1,
+                "debug_output" : 0,
+                "with_black"  : 0
+            },
+            "paramFloats" : {
+                "max_obs_score" : 10.0
+            }
+        }
+    },
+    {
+        "class name" : "Diff",
+        "content" : {
+            "name" : "green_density_without_black",
+            "dependencies" : ["greenDensity", "blackDensity"]
+        }
+    },
+    {
+        "class name" : "ColorDensity",
+        "content" : {
+            "name" : "blackDensity",
+            "dependencies" : ["blackII"],
+            "paramInts" : { "kernel_size" : 30},
+            "paramFloats" : {"resize_factor" : 0.2}
+        }
+    },
+    {
+        "class name" : "Integral",
+        "content" : {
+            "name" : "blackII",
+            "dependencies" : ["black_erode_dilate"]
+        }
+    },
+    {
+        "class name" : "Dilate",
+        "content" : {
+            "name" : "black_erode_dilate",
+            "dependencies" : ["black_erode"],
+            "paramInts" : {
+                //"kernel width" : 2
+                //"kernel height" : 2
+            }
+        }
+    },
+    {
+        "class name" : "Erode",
+        "content" : {
+            "name" : "black_erode",
+            "dependencies" : ["black"],
+            "paramInts" : {
+                //"kernel width" : 2
+                //"kernel height" : 2
+            }
+        }
+    },
+    {
+        "class name" : "ColorBounding",
+        "content" : {
+            "name" : "black",
+            "dependencies" : ["source"],
+            "paramInts" : {
+                "minY" : 36,
+                "maxY" : 49,
+                "minU" : 72,
+                "maxU" : 162,
+                "minV" : 129,
+                "maxV" : 153
+            }
+        }
+    },
+    {
+        "class name" : "Threshold",
+        "content" : {
+            "name" : "white_line_color",
+            "dependencies" : ["Y"],
+            "paramInts" : {"threshold" : 110}
+        }
+    }
+]

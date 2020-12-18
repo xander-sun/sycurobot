@@ -1,0 +1,63 @@
+{
+    "angularPitchTolerance" : 5,
+    "benchmark" : false,
+    "benchmarkDetail" : 4,
+    "gpuOn" : false,
+    "readFromLog" : false,
+    "embedded" : true,
+    "imageDelay" : -5,
+    "arenaProviders" : [],
+    "goalProviders" : [],
+    "ballProviders" : [],
+    "compassProviders" : [],
+    "tagsProviders" : ["tagsDetector"],
+    "playing" : true,
+    "pipeline" :
+    [
+        {
+            "class name" : "TagsDetector",
+            "content" : {
+                "name" : "tagsDetector",
+                "dependencies" : ["Y"],
+                "paramInts" : {
+                    "debugLevel" : 1,
+                    "thresRange" : 4
+                },
+                "paramFloats" : {
+                    "markerSize" : 0.09
+                }
+            }
+        },
+        {
+            "class name" : "ChannelSelector",
+            "content" : {
+                "name" : "Y",
+                "dependencies" : ["source"],
+                "paramInts" : {
+                    "channel" : 0
+                }
+            }
+        },
+        {
+            "class name" : "SourcePtGrey",
+            "content" : {
+                "name" : "source",
+                "wished_properties" : {
+                    "Shutter" : {
+                        "autoManualMode" : false,
+                        "absValue" : 3
+                    },
+                    "Gain" : {
+                        "autoManualMode" : false,
+                        "absValue" : 10
+                    },
+                    // For aruco Calib a 10Hz frequency is enough
+                    "FrameRate" : {
+                        "autoManualMode" : false,
+                        "absValue" : 10
+                    }
+                }
+            }
+        }
+    ]
+}
